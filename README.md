@@ -2,7 +2,7 @@
 ## Docker安装
 - [Docker](./Docker/Docker+DockerCompose+Harbor.md)
 - [Prometheus+Exporter+Grafana](./Docker/Prometheus+Exporter+Grafana/Prometheus+Exporter+Grafana.md)
-- [Minio](./Docker/minio.md)
+- [Minio](./Docker/Minio.md)
 - [Mongodb](./Docker/Mongodb.md)
 - [Postgres](./Docker/Postgresql.md)
 - [Jenkins](./Docker/Jenkins/Jenkins.md)
