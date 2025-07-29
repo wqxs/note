@@ -1,7 +1,7 @@
 参考文档：https://www.cnblogs.com/morang/p/devops-prometheus-grafana-install-use-db-site-monitor.html
 
 - Prometheus：监控中心，监控exporter的实时数据
-- exporter：采集数据工具，如下：![alt text](image.png)
+- exporter：采集数据工具，如下：![image](image.png)
 - Grafana：可视化监控
 
 ## 搭建Prometheus
@@ -394,9 +394,7 @@ mkdir -p /data/grafana/conf
 # 配置defaults.ini文件
 vi /data/grafana/conf/defaults.ini
 ```
-配置defaults.ini文件
-
-下载地址：https://download.csdn.net/download/qq_40660787/89685294
+配置defaults.ini文件：[defaults.ini](defaults.ini)
 
 docker安装grafana
 ```
