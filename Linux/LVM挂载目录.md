@@ -1,0 +1,167 @@
+创建分区（默认MBR分区）
+```
+# 创建分区
+# 对一个物理磁盘开始创建分区
+fdisk /dev/sdb
+# 进入编译器界面
+# m：显示帮助菜单，列出所有可用的命令。
+# p：打印分区表。
+# n：新建一个分区。
+# d：删除一个分区。
+# t：更改分区类型。
+# w：写入修改到磁盘并退出。
+# q：不保存修改并退出。
+ 
+输入 n 创建新分区。
+选择分区类型（p 为主分区，e 为扩展分区，l 为逻辑分区）。
+指定分区号（对于初级和逻辑分区，通常是从1到4）。
+确定分区的起始和结束位置。
+w保存修改后结果
+```
+
+创建GPT分区方式（GPT分区支持容量大于2T,MBR分区只能小于等于2T）
+```
+# 第二种创建分区方式
+parted /dev/sdb
+ 
+# 初始化GPT分区
+mklabel gpt
+ 
+# 设置分区大小 
+mkpart primary ext4 0 100%
+ 
+# 退出
+q
+```
+
+将分区创建为物理卷（PV）
+```
+# 查询所有物理卷（PV）信息
+pvdisplay
+ 
+# 创建物理卷（PV）
+pvcreate /dev/sdb1
+ 
+# 物理卷（PV）的其他操作
+# 删除物理卷
+pvremove /dev/sdb1
+```
+
+创建卷组（VG），并将物理卷（PV）加入到卷组（VG）中
+```
+# 查询所有卷组（VG）信息
+vgdisplay
+ 
+# 创建卷组（VG）（这里示例为 vg_data），并将两个物理卷（PV）加入到卷组（VG）中
+vgcreate vg_data /dev/sdb1 /dev/sdb2
+ 
+# 将两个物理卷（PV）到入到一个存在的卷组（VG）中（这里示例为 vg_data）
+vgextend vg_data /dev/sdb1 /dev/sdb2
+ 
+# 卷组（VG）的其他操作
+# 从卷组（VG）中移除物理卷（PV）
+vgreduce vg_data /dev/sdb1 /dev/sdb2
+# 删除卷组（VG）
+vgremove vg_data
+```
+
+创建逻辑卷（LV），并分配空间
+```
+# 查询所有逻辑卷（LV）信息
+lvdisplay
+ 
+# 创建逻辑卷（LV），并赋值大小，lv_data是逻辑卷名称，vg_data是卷组的名称
+lvcreate -L 20G -n lv_data vg_data
+ 
+# 扩展逻辑卷（LV）空间，占用卷组（VG）剩余全部空间，lv_data是逻辑卷名称，vg_data是卷组的名称
+lvextend -l +100%FREE /dev/vg_data/lv_data
+ 
+# 缩小逻辑卷（LV）空间
+lvreduce -L -10G /dev/vg_data/lv_data
+```
+
+对逻辑卷设置文件系统类型，并挂载
+```
+# 设置文件系统
+# ext4 是稳健和成熟的选择，适用于各种通用环境。
+# xfs 执行大规模文件操作和并发处理时非常出色。
+# btrfs 在功能性和多样性方面最为丰富，但相对来说比ext4和xfs年轻，可能在某些条件下不太稳定。
+mkfs.ext4 /dev/vg_data/lv_data
+ 
+# 将逻辑卷（LV）挂载到目录 /data
+mount /dev/vg_data/lv_data /data
+ 
+# 其他操作
+# 当文件系统大小发生变化时，扩展文件系统以使用新的空间
+# 文件系统类型是：ext4
+# resize2fs /dev/vg_data/lv_data
+# 文件系统类型是：xfs
+# xfs_growfs /data
+ 
+# 取消挂载
+umount /data
+```
+
+挂载自启动
+```
+# 修改挂载文件
+vi /etc/fstab
+ 
+# 添加一行
+# 挂载分区              挂载目录    文件系统   默认挂载方式  
+/dev/vg_data/lv_data   /data       ext4       defaults       0      0
+ 
+# 挂载目录看是否生效
+mount /dev/vg_data/lv_data /data
+```
+
+分区，物理卷（PV），卷组（VG），逻辑卷（LV）的其他操作
+```
+# 1.扩展分区/物理卷大小
+# 1.1.进入parted命令行
+parted /dev/sdb1
+# 1.1.1.调整分区大小
+resizepart 1 10G
+# 1.1.1.退出
+quit
+# 1.3.将修改后的分区大小扩展到物理卷上
+pvresize /dev/sdb1
+ 
+# 1.删除物理卷和卷组
+# 1.1.先删除逻辑卷
+# 1.1.如果已经挂载了目录先备份数据，然后再卸载挂载目录
+umount /data
+# 1.2.删除逻辑卷
+lvremove /dev/vg_data/lv_data
+# 1.2.从卷组移除物理卷
+vgreduce vg_data /dev/sdb1
+# 1.3.删除卷组
+vgremove vg_data
+# 1.4.删除物理卷
+pvremove /dev/sdb1
+ 
+# 1.更换逻辑卷，逻辑卷/dev/test/a1挂载目录/data/a1，逻辑卷/dev/test/a2挂载目录/data/a2
+# 将逻辑卷/dev/test/a1的数据迁移到逻辑卷/dev/test/a2
+# 1.1.复制数据
+# -a 代表归档模式，它保留了原文件的权限、时间戳、软硬链接等。
+# -A 代表保留ACLs（访问控制列表）。
+# -X 代表使用LVM或NFS的xattrs（扩展属性）。
+# -v 代表详细模式，显示更多的信息。
+# /data/a1/ 是源逻辑卷的挂载点。
+# /data/a2/ 是目标逻辑卷的挂载点。
+rsync -aAXv /data/a1/* /data/a2/
+# 1.2.挂载点切换
+# 1.2.1.卸载源逻辑卷挂载点和目标挂载点
+umount /data/a1
+umount /data/a2
+# 1.2.2.将目标逻辑卷挂载到源挂载点上
+mount /dev/test/a2 /data/a1
+# 1.2.3.检查数据如果没有问题，可以将源逻辑卷挂载到新的目录作为备份，也可以删除
+ 
+ 
+# 刷新磁盘空间
+echo 1 > /sys/class/block/sdb/device/rescan
+ 
+# 取消挂载时若出现分区忙的情况，需要将所有涉及该分区目录的进程杀掉，有个粗暴快速的方法
+fuser -k /home 
+```
