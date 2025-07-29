@@ -4,7 +4,7 @@
 ```
 # 账号：miniouser
 # 密码：miniopassword
- 
+
 # docker安装minio
 docker run -d \
 --restart=always \
